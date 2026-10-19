@@ -56,8 +56,8 @@ spec:
       default: ""
     - name: tl-npm-registry-url
       description: >-
-        Read-only npm registry used by assess-npm-compliance for dependency
-        closure (Lightwell stage validated Pulp content URL)
+        Read-only npm registry used by assess-npm-compliance to assess npm dependency closure compliance
+        (Lightwell validated Pulp content URL)
       type: string
       default: "https://packages.redhat.com/api/pulp-content/lightwell-stage/javascript/validated"
     - name: pulp-read-secret-name

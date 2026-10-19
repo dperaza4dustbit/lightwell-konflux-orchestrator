@@ -69,7 +69,7 @@ def add_build_args(parser: argparse.ArgumentParser) -> None:
             "LIGHTWELL_JAVASCRIPT_TL_NPM_REGISTRY_URL",
             config.DEFAULT_TL_NPM_REGISTRY_URL,
         ),
-        help="TL npm registry URL for assess-npm-compliance",
+        help="Registry URL for assess npm compliance (default: ${config.DEFAULT_TL_NPM_REGISTRY_URL})",
     )
     parser.add_argument(
         "--pulp-read-secret-name",

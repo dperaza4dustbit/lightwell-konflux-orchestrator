@@ -77,6 +77,7 @@ def _manifest(**overrides):
         builder_image="quay.io/example/npm-builder@sha256:abc",
         task_build_npm_package_bundle="quay.io/example/task-build@sha256:def",
         task_assess_npm_compliance_bundle="quay.io/example/task-assess@sha256:ghi",
+        tl_npm_registry_url=("https://packages.redhat.com/api/pulp-content/lightwell-stage/javascript/validated"),
         service_account="build-pipeline-javascript-validated-build",
     )
     kwargs.update(overrides)
