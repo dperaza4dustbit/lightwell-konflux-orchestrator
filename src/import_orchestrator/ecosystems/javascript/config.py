@@ -49,8 +49,8 @@ DEFAULT_SOURCE_REVISION = "main"
 # Pinned digests from the calunga npm PoC (reuse until lightwell npm-builder lands).
 DEFAULT_BUILDER_IMAGE = (
     "quay.io/redhat-user-workloads/calunga-tenant/npm-builder:"
-    "4223587b7123d8c7d5a4b2ff8b5253b8076a1c06@"
-    "sha256:8705cb985e00a236673a384cbdf7a0deaeeca3d359e611fdb8bc23b321ae5755"
+    "08a6938c365048b96c53fd8e916e881f5c90328f@"
+    "sha256:3539a958acc996451a5d3e2bd16e0ce4bd95350677743f4f2315be320f0a54a7"
 )
 DEFAULT_TASK_BUILD_NPM_PACKAGE_BUNDLE = (
     "quay.io/redhat-user-workloads/calunga-tenant/task-build-npm-package:"
@@ -59,9 +59,14 @@ DEFAULT_TASK_BUILD_NPM_PACKAGE_BUNDLE = (
 )
 DEFAULT_TASK_ASSESS_NPM_COMPLIANCE_BUNDLE = (
     "quay.io/redhat-user-workloads/calunga-tenant/task-promote-npm-oci:"
-    "4223587b7123d8c7d5a4b2ff8b5253b8076a1c06@"
-    "sha256:73e9b4cc00094e24f024bdb7e68cc2d346edefffad9e27a931c018fa964df682"
+    "08a6938c365048b96c53fd8e916e881f5c90328f@"
+    "sha256:3ad13b74eea30075fb3aea431de87312427aa37ef035f2f807bd6a6af5ed19f2"
 )
+
+# Assess npm dependency-closure compliance against Lightwell stage validated Pulp.
+DEFAULT_TL_NPM_REGISTRY_URL = "https://packages.redhat.com/api/pulp-content/lightwell-stage/javascript/validated"
+# Optional basic-auth Secret for gated TL registry reads (assess task mount).
+DEFAULT_PULP_READ_SECRET_NAME = "lightwell-pulp-read-secret"
 
 
 def pipeline_definition_path() -> Path:

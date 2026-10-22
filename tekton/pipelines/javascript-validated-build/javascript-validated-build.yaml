@@ -54,6 +54,21 @@ spec:
       description: Pulp Stage npm registry URL (only when publish-to-pulp is true)
       type: string
       default: ""
+    - name: tl-npm-registry-url
+      description: >-
+        Read-only npm registry used by assess-npm-compliance for dependency
+        closure (Lightwell stage validated Pulp content URL)
+      type: string
+      default: "https://packages.redhat.com/api/pulp-content/lightwell-stage/javascript/validated"
+    - name: pulp-read-secret-name
+      description: >-
+        Secret with Pulp read basic-auth for tl-npm-registry-url
+        (SERVICE_ACCOUNT_USERNAME/SERVICE_ACCOUNT_PASSWORD). Lightwell must
+        pass a real Secret name (default lightwell-pulp-read-secret). The
+        assess Task defaults to does-not-exist so Calunga/public-TL runs do
+        not mount credentials.
+      type: string
+      default: lightwell-pulp-read-secret
     - name: npm-publish-secret-name
       type: string
       default: rhtl-pulp-npm-stage-credentials
@@ -163,6 +178,10 @@ spec:
           value: has-packages
         - name: IMAGE_EXPIRES_AFTER
           value: $(params.image-expires-after)
+        - name: TL_NPM_REGISTRY_URL
+          value: $(params.tl-npm-registry-url)
+        - name: PULP_READ_SECRET_NAME
+          value: $(params.pulp-read-secret-name)
       taskRef:
         resolver: bundles
         params:
