@@ -67,6 +67,8 @@ def build_pipelinerun_manifest(
     builder_image: str,
     task_build_npm_package_bundle: str,
     task_assess_npm_compliance_bundle: str,
+    tl_npm_registry_url: str = config.DEFAULT_TL_NPM_REGISTRY_URL,
+    pulp_read_secret_name: str = config.DEFAULT_PULP_READ_SECRET_NAME,
     service_account: str | None = None,
 ) -> dict[str, Any]:
     """Build a javascript-validated-build PipelineRun for one package/version.
@@ -86,6 +88,8 @@ def build_pipelinerun_manifest(
         {"name": "builder-image", "value": builder_image},
         {"name": "task-build-npm-package-bundle", "value": task_build_npm_package_bundle},
         {"name": "task-assess-npm-compliance-bundle", "value": task_assess_npm_compliance_bundle},
+        {"name": "tl-npm-registry-url", "value": tl_npm_registry_url},
+        {"name": "pulp-read-secret-name", "value": pulp_read_secret_name},
     ]
 
     spec: dict[str, Any] = {

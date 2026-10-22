@@ -120,6 +120,22 @@ class TestBuildManifest:
         )
         assert params["output-image"] == expected_image
         assert params["builder-image"].startswith("quay.io/example/npm-builder")
+        assert params["tl-npm-registry-url"] == (
+            "https://packages.redhat.com/api/pulp-content/lightwell-stage/javascript/validated"
+        )
+        assert params["pulp-read-secret-name"] == "lightwell-pulp-read-secret"
+
+    def test_tl_registry_and_read_secret_overrides(self):
+        """Manifest accepts overrides for TL registry URL and read secret name."""
+        params = {
+            p["name"]: p["value"]
+            for p in _manifest(
+                tl_npm_registry_url="https://example.test/javascript",
+                pulp_read_secret_name="custom-pulp-read",
+            )["spec"]["params"]
+        }
+        assert params["tl-npm-registry-url"] == "https://example.test/javascript"
+        assert params["pulp-read-secret-name"] == "custom-pulp-read"
 
     def test_scoped_package_sanitizes_tag_and_label(self):
         """Scoped npm names keep the recipe path but sanitize tag and label."""

@@ -63,6 +63,22 @@ def add_build_args(parser: argparse.ArgumentParser) -> None:
         ),
         help="Tekton bundle for assess-npm-compliance-oci-ta",
     )
+    parser.add_argument(
+        "--tl-npm-registry-url",
+        default=os.environ.get(
+            "LIGHTWELL_JAVASCRIPT_TL_NPM_REGISTRY_URL",
+            config.DEFAULT_TL_NPM_REGISTRY_URL,
+        ),
+        help="TL npm registry URL for assess-npm-compliance",
+    )
+    parser.add_argument(
+        "--pulp-read-secret-name",
+        default=os.environ.get(
+            "LIGHTWELL_JAVASCRIPT_PULP_READ_SECRET_NAME",
+            config.DEFAULT_PULP_READ_SECRET_NAME,
+        ),
+        help="K8s Secret name with Pulp read basic-auth for TL registry",
+    )
 
 
 def register(subparsers: argparse._SubParsersAction, ecosystem: Ecosystem) -> None:
