@@ -72,7 +72,7 @@ def _manifest(**overrides):
         component="javascript-validated-build",
         prefix="javascript-validated-build-",
         image_repo_base="quay.io/redhat-user-workloads/lightwell-javascript-tenant",
-        source_git_url="https://github.com/calungaproject/npm-registry",
+        source_git_url="https://gitlab.cee.redhat.com/lightwell/lightwell-builds/build-configs/calunga-javascript",
         source_revision="main",
         builder_image="quay.io/example/npm-builder@sha256:abc",
         task_build_npm_package_bundle="quay.io/example/task-build@sha256:def",
@@ -111,7 +111,9 @@ class TestBuildManifest:
     def test_params(self):
         """Manifest params target a single packages/<name>/<version> path."""
         params = {p["name"]: p["value"] for p in _manifest()["spec"]["params"]}
-        assert params["git-url"] == "https://github.com/calungaproject/npm-registry"
+        assert params["git-url"] == (
+            "https://gitlab.cee.redhat.com/lightwell/lightwell-builds/build-configs/calunga-javascript"
+        )
         assert params["revision"] == "main"
         assert params["packages"] == ["packages/bluebird/3.7.2"]
         expected_image = (
@@ -124,6 +126,20 @@ class TestBuildManifest:
             "https://packages.redhat.com/api/pulp-content/lightwell-stage/javascript/validated"
         )
         assert params["pulp-read-secret-name"] == "lightwell-pulp-read-secret"
+
+    def test_git_auth_workspace_bound_to_secret(self):
+        """The clone task authenticates via the git-auth workspace, backed by a secret."""
+        workspaces = _manifest()["spec"]["workspaces"]
+        assert workspaces == [
+            {"name": "git-auth", "secret": {"secretName": "lightwell-builds-git-auth"}},
+        ]
+
+    def test_git_auth_secret_override(self):
+        """Manifest accepts an override for the git-auth secret name."""
+        workspaces = _manifest(git_auth_secret="custom-git-auth")["spec"]["workspaces"]
+        assert workspaces == [
+            {"name": "git-auth", "secret": {"secretName": "custom-git-auth"}},
+        ]
 
     def test_tl_registry_and_read_secret_overrides(self):
         """Manifest accepts overrides for TL registry URL and read secret name."""

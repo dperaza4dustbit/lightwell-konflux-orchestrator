@@ -16,7 +16,7 @@ spec:
   params:
     - name: git-url
       type: string
-      description: Recipe monorepo URL (npm-registry)
+      description: Recipe monorepo URL (calunga-javascript build-configs)
     - name: revision
       type: string
       description: Git revision of the recipe monorepo to build
