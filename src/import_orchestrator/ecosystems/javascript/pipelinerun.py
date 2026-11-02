@@ -69,6 +69,7 @@ def build_pipelinerun_manifest(
     task_assess_npm_compliance_bundle: str,
     tl_npm_registry_url: str = config.DEFAULT_TL_NPM_REGISTRY_URL,
     pulp_read_secret_name: str = config.DEFAULT_PULP_READ_SECRET_NAME,
+    git_auth_secret: str = config.GIT_AUTH_SECRET,
     service_account: str | None = None,
 ) -> dict[str, Any]:
     """Build a javascript-validated-build PipelineRun for one package/version.
@@ -76,6 +77,9 @@ def build_pipelinerun_manifest(
     The recipe lives under ``packages/<name>/<version>/`` in the source monorepo
     (scoped names keep ``@scope/name`` in the path). Output OCI tag and the
     ``lightwell.redhat.com/package`` label use a sanitized package slug.
+
+    ``git_auth_secret`` names the secret bound to the ``git-auth`` workspace,
+    which the clone task uses to authenticate against the recipe monorepo.
     """
     package_path = config.package_dir(package, version)
     package_slug = sanitize_package_for_resource(package)
@@ -95,6 +99,9 @@ def build_pipelinerun_manifest(
     spec: dict[str, Any] = {
         "pipelineSpec": pipeline_spec,
         "params": params,
+        "workspaces": [
+            {"name": "git-auth", "secret": {"secretName": git_auth_secret}},
+        ],
     }
     if service_account:
         spec["taskRunTemplate"] = {"serviceAccountName": service_account}

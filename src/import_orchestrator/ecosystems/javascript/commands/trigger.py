@@ -35,7 +35,7 @@ def add_build_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--source-git-url",
         default=os.environ.get("LIGHTWELL_JAVASCRIPT_SOURCE_GIT_URL", config.DEFAULT_SOURCE_GIT_URL),
-        help="Recipe monorepo URL (default: npm-registry)",
+        help="Recipe monorepo URL (default: calunga-javascript build-configs)",
     )
     parser.add_argument(
         "--source-revision",

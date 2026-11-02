@@ -61,6 +61,7 @@ class JavaScriptEcosystem:
             ),
             tl_npm_registry_url=getattr(args, "tl_npm_registry_url", config.DEFAULT_TL_NPM_REGISTRY_URL),
             pulp_read_secret_name=getattr(args, "pulp_read_secret_name", config.DEFAULT_PULP_READ_SECRET_NAME),
+            git_auth_secret=getattr(args, "git_auth_secret", config.GIT_AUTH_SECRET),
         )
 
     def request_identity(self, ref: str, args: argparse.Namespace) -> dict[str, str]:

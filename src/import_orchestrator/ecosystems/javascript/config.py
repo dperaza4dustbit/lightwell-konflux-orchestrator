@@ -42,9 +42,13 @@ DEFAULT_TARGET = "VALIDATED"
 
 IMAGE_REPO_BASE = "quay.io/redhat-user-workloads/lightwell-javascript-tenant"
 
-# Interim recipe monorepo (per-package lightwell-builds repos come later).
-DEFAULT_SOURCE_GIT_URL = "https://github.com/calungaproject/npm-registry"
+# Recipe monorepo under Lightwell build-configs (calunga-javascript).
+DEFAULT_SOURCE_GIT_URL = "https://gitlab.cee.redhat.com/lightwell/lightwell-builds/build-configs/calunga-javascript"
 DEFAULT_SOURCE_REVISION = "main"
+
+# Secret bound to the git-auth workspace. The clone task uses it to authenticate
+# against gitlab.cee.redhat.com (same secret name as the python ecosystem).
+GIT_AUTH_SECRET = "lightwell-builds-git-auth"
 
 # Pinned digests from the calunga npm PoC (reuse until lightwell npm-builder lands).
 DEFAULT_BUILDER_IMAGE = (
