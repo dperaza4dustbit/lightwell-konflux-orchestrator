@@ -160,6 +160,9 @@ spec:
             value: $(params.task-build-npm-package-bundle)
           - name: kind
             value: task
+      workspaces:
+        - name: git-auth
+          workspace: git-auth
     - name: assess-npm-compliance
       runAfter:
         - build-npm-package
