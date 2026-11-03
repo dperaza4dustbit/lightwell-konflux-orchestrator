@@ -53,13 +53,13 @@ GIT_AUTH_SECRET = "lightwell-builds-git-auth"
 # Pinned digests from the calunga npm PoC (reuse until lightwell npm-builder lands).
 DEFAULT_BUILDER_IMAGE = (
     "quay.io/light-factory/npm-builder:"
-    "91876b128455dd30d6482620464e89387140f641@"
-    "sha256:f6ae58c4c98d1d88a9224e205a2c59f31a6dc132c6e67b7fedbbdd938ab17eb4"
+    "ba0b1093f63cea9ae8c38e4f389b672ae29bc4d2@"
+    "sha256:ad43751787c1dbf5b8fa44c4fe1789bea78edae2cbcf144e1ddb4801be601100"
 )
 DEFAULT_TASK_BUILD_NPM_PACKAGE_BUNDLE = (
     "quay.io/konflux-ci/tekton-catalog/task-build-npm-package:"
-    "0.1-1793012480@"
-    "sha256:bba20255f99b0f4e76d3e40a286721fd663758053aa3b8a78bf6f8ce8c1273a2"
+    "0.1-1793720581@"
+    "sha256:b337fb2f684bf6fb45bc6c880fda9269fba088458dad281196e74435be1bf706"
 )
 DEFAULT_TASK_ASSESS_NPM_COMPLIANCE_BUNDLE = (
     "quay.io/konflux-ci/tekton-catalog/task-assess-npm-compliance:"
