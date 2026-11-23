@@ -230,3 +230,49 @@ class TestPruneFlag:
 
         assert rc == 0
         assert mock_orch.call_args.kwargs["prune_monitor"] is not None
+
+    def test_run_orchestrate_uses_target_pipelinerun_prefix(self, tmp_path: Path):
+        """Release createName uses per-target prefix when the ecosystem supplies one."""
+
+        class _Eco:
+            namespace = _NS
+            pipelinerun_prefix = "javascript-validated-build-"
+
+            def pipelinerun_prefix_for(self, args):
+                return "javascript-remediated-build-"
+
+            def build_pipelinerun(self, ref, args):
+                return _manifest()
+
+            def request_identity(self, artifact, args):
+                return {
+                    "namespace": _NS,
+                    "application": _APP,
+                    "component": "comp",
+                    "pipeline": "javascript-remediated-build",
+                    "release_plan": "",
+                    "target": "REMEDIATED_STAGE",
+                    "artifact": artifact,
+                }
+
+        args = argparse.Namespace(
+            db=tmp_path / "state.db",
+            print_resources=False,
+            ecosystem=_Eco(),
+            release_data_repo=None,
+            max_parallel=1,
+            max_retries=3,
+            poll_interval=0,
+            release_plan=None,
+            target="REMEDIATED_STAGE",
+        )
+
+        with (
+            patch("import_orchestrator.commands.orchestrate.KubeClient"),
+            patch("import_orchestrator.commands.orchestrate.ImportOrchestrator") as mock_orch,
+            patch("import_orchestrator.commands.orchestrate.ReleaseMonitor") as mock_release,
+        ):
+            mock_orch.return_value.run_until_complete.return_value = 0
+            assert run_orchestrate(args, "empty db hint") == 0
+
+        assert mock_release.call_args.kwargs["prefix"] == "javascript-remediated-build-"

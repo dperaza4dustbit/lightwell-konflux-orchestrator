@@ -56,11 +56,12 @@ def add_build_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--task-assess-npm-compliance-bundle",
-        default=os.environ.get(
-            "LIGHTWELL_JAVASCRIPT_TASK_ASSESS_BUNDLE",
-            config.DEFAULT_TASK_ASSESS_NPM_COMPLIANCE_BUNDLE,
+        default=os.environ.get("LIGHTWELL_JAVASCRIPT_TASK_ASSESS_BUNDLE") or None,
+        help=(
+            "Tekton bundle for assess-npm-compliance-oci-ta "
+            "(default: pinned catalog digest when the target includes assess; "
+            "or LIGHTWELL_JAVASCRIPT_TASK_ASSESS_BUNDLE)"
         ),
-        help="Tekton bundle for assess-npm-compliance-oci-ta",
     )
     parser.add_argument(
         "--tl-npm-registry-url",
@@ -72,11 +73,12 @@ def add_build_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--pulp-read-secret-name",
-        default=os.environ.get(
-            "LIGHTWELL_JAVASCRIPT_PULP_READ_SECRET_NAME",
-            config.DEFAULT_PULP_READ_SECRET_NAME,
+        default=os.environ.get("LIGHTWELL_JAVASCRIPT_PULP_READ_SECRET_NAME") or None,
+        help=(
+            "K8s Secret name with Pulp read basic-auth for TL registry "
+            "(default: lightwell-pulp-read-secret when the target includes assess; "
+            "or LIGHTWELL_JAVASCRIPT_PULP_READ_SECRET_NAME)"
         ),
-        help="K8s Secret name with Pulp read basic-auth for TL registry",
     )
     parser.add_argument(
         "--publish-version-suffix",
@@ -93,11 +95,29 @@ def check_build_args(args: argparse.Namespace) -> bool:
     """Reject build flag combinations argparse cannot express; print the error to stderr."""
     suffix = getattr(args, "publish_version_suffix", None)
     target = getattr(args, "target", config.DEFAULT_TARGET)
-    if suffix and not config.TARGET_CONFIGS[target].get("allow_publish_version_suffix", False):
-        allowed = ", ".join(t for t, cfg in config.TARGET_CONFIGS.items() if cfg.get("allow_publish_version_suffix"))
+    cfg = config.TARGET_CONFIGS[target]
+    if suffix and not cfg.get("allow_publish_version_suffix", False):
+        allowed = ", ".join(t for t, c in config.TARGET_CONFIGS.items() if c.get("allow_publish_version_suffix"))
         print(
             f"ERROR: --publish-version-suffix is not allowed for target {target} (allowed: {allowed})",
             file=sys.stderr,
         )
         return False
+    if not cfg.get("include_assess", True):
+        forbidden = [
+            flag
+            for flag, attr in (
+                ("--tl-npm-registry-url", "tl_npm_registry_url"),
+                ("--pulp-read-secret-name", "pulp_read_secret_name"),
+                ("--task-assess-npm-compliance-bundle", "task_assess_npm_compliance_bundle"),
+            )
+            if getattr(args, attr, None)
+        ]
+        if forbidden:
+            print(
+                f"ERROR: {', '.join(forbidden)} not allowed for target {target} "
+                "(that target omits assess; unset the flags/env or use a validated target)",
+                file=sys.stderr,
+            )
+            return False
     return True

@@ -177,3 +177,18 @@ class TestBuildManifest:
             "javascript-validated/javascript-validated-build:babel-core-7.3.2"
         )
         assert params["output-image"] == expected_image
+
+    def test_remediated_omits_assess_params(self):
+        """Thin remediations PipelineRuns omit assess registry params."""
+        manifest = _manifest(
+            application="javascript-remediated-stage",
+            component="javascript-remediated-stage-build",
+            prefix="javascript-remediated-build-",
+            include_assess=False,
+            task_assess_npm_compliance_bundle=None,
+        )
+        params = {p["name"]: p["value"] for p in manifest["spec"]["params"]}
+        assert "task-assess-npm-compliance-bundle" not in params
+        assert "tl-npm-registry-url" not in params
+        assert "pulp-read-secret-name" not in params
+        assert manifest["metadata"]["labels"]["pipelines.openshift.io/runtime"] == "build-npm"

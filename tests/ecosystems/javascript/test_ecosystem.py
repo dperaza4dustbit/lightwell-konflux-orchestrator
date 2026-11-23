@@ -146,6 +146,58 @@ def test_validated_does_not_skip_release():
     """VALIDATED waits on Release; no SCRATCH target until dedicated wiring exists."""
     assert JavaScriptEcosystem().target_skip_release("VALIDATED") is False
     assert JavaScriptEcosystem().target_skip_release("VALIDATED_STAGE") is False
+    assert JavaScriptEcosystem().target_skip_release("REMEDIATED_STAGE") is False
+
+
+def test_build_pipelinerun_remediated_stage_target(monkeypatch, tmp_path):
+    """REMEDIATED_STAGE uses the thin remediations pipeline and omits assess params."""
+    pipeline_file = (
+        tmp_path / "tekton" / "pipelines" / "javascript-remediated-build" / "javascript-remediated-build.yaml"
+    )
+    pipeline_file.parent.mkdir(parents=True)
+    pipeline_file.write_text("spec:\n  tasks: []\n")
+    monkeypatch.setenv("TEKTON_PIPELINE_DIR", str(tmp_path / "tekton"))
+
+    manifest = JavaScriptEcosystem().build_pipelinerun(
+        "bluebird==3.7.2",
+        argparse.Namespace(target="REMEDIATED_STAGE"),
+    )
+
+    labels = manifest["metadata"]["labels"]
+    assert labels["appstudio.openshift.io/application"] == "javascript-remediated-stage"
+    assert labels["appstudio.openshift.io/component"] == "javascript-remediated-stage-build"
+    assert labels["pipelines.openshift.io/runtime"] == "build-npm"
+    assert manifest["metadata"]["generateName"] == "javascript-remediated-build-"
+    assert manifest["spec"]["taskRunTemplate"]["serviceAccountName"] == (
+        "build-pipeline-javascript-remediated-stage-build"
+    )
+    params = {p["name"]: p["value"] for p in manifest["spec"]["params"]}
+    assert "task-assess-npm-compliance-bundle" not in params
+    assert "tl-npm-registry-url" not in params
+    assert "pulp-read-secret-name" not in params
+    assert params["output-image"].endswith(
+        "/javascript-remediated-stage/javascript-remediated-stage-build:bluebird-3.7.2"
+    )
+
+
+def test_pipelinerun_prefix_for_remediated_stage():
+    """REMEDIATED_STAGE uses the remediations generateName prefix, not validated."""
+    eco = JavaScriptEcosystem()
+    assert eco.pipelinerun_prefix == "javascript-validated-build-"
+    assert eco.pipelinerun_prefix_for(argparse.Namespace(target="REMEDIATED_STAGE")) == "javascript-remediated-build-"
+    assert eco.pipelinerun_prefix_for(argparse.Namespace(target="VALIDATED")) == "javascript-validated-build-"
+
+
+def test_request_identity_remediated_stage_target():
+    """request_identity fingerprints REMEDIATED_STAGE app/component when selected."""
+    identity = JavaScriptEcosystem().request_identity(
+        "bluebird==3.7.2",
+        argparse.Namespace(target="REMEDIATED_STAGE"),
+    )
+    assert identity["application"] == "javascript-remediated-stage"
+    assert identity["component"] == "javascript-remediated-stage-build"
+    assert identity["pipeline"] == "javascript-remediated-build"
+    assert identity["target"] == "REMEDIATED_STAGE"
 
 
 def test_request_identity_defaults_to_validated_target():

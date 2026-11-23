@@ -26,6 +26,7 @@ from pathlib import Path
 from import_orchestrator.clients import KubeClient
 from import_orchestrator.constants import CLUSTER_API, KUBEARCHIVE_API
 from import_orchestrator.database import WorkflowDatabase, warn_if_legacy_database
+from import_orchestrator.ecosystems.base import resolve_pipelinerun_prefix
 from import_orchestrator.engine import (
     ImportOrchestrator,
     ImportTrigger,
@@ -156,7 +157,7 @@ def run_single(args: argparse.Namespace, ref: str) -> int:
                 view=view,
                 kube=kube,
                 max_parallel=1,
-                prefix=eco.pipelinerun_prefix,
+                prefix=resolve_pipelinerun_prefix(eco, args),
                 release_plan=getattr(args, "release_plan", None),
             )
 

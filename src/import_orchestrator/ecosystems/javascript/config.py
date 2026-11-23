@@ -22,10 +22,15 @@ from pathlib import Path
 JAVASCRIPT_DEFAULT_DB_PATH = "./javascript_import_state.db"
 NAMESPACE = "lightwell-javascript-tenant"
 PIPELINERUN_PREFIX = "javascript-validated-build-"
+REMEDIATED_PIPELINERUN_PREFIX = "javascript-remediated-build-"
 
 # Assess npm dependency-closure compliance against Lightwell validated Pulp.
 TL_NPM_REGISTRY_URL_PROD = "https://packages.redhat.com/api/pulp-content/lightwell/javascript/validated"
 TL_NPM_REGISTRY_URL_STAGE = "https://packages.redhat.com/api/pulp-content/lightwell-stage/javascript/validated"
+
+# Pipeline YAML relative to tekton/ (or TEKTON_PIPELINE_DIR).
+VALIDATED_PIPELINE_SUBPATH = Path("pipelines") / "javascript-validated-build" / "javascript-validated-build.yaml"
+REMEDIATED_PIPELINE_SUBPATH = Path("pipelines") / "javascript-remediated-build" / "javascript-remediated-build.yaml"
 
 # Build targets, keyed by target name. Selected via ``--target``.
 # Component/SA names match the provisioned Konflux resources on stone-prod-p01.
@@ -37,18 +42,36 @@ TARGET_CONFIGS: dict[str, dict] = {
         "tl_npm_registry_url": TL_NPM_REGISTRY_URL_STAGE,
         "skip_release": True,
         "allow_publish_version_suffix": True,
+        "pipeline_subpath": VALIDATED_PIPELINE_SUBPATH,
+        "pipelinerun_prefix": PIPELINERUN_PREFIX,
+        "include_assess": True,
     },
     "VALIDATED_STAGE": {
         "app": "javascript-validated-stage",
         "component": "javascript-validated-stage-build",
         "service_account": "build-pipeline-javascript-validated-stage-build",
         "tl_npm_registry_url": TL_NPM_REGISTRY_URL_STAGE,
+        "pipeline_subpath": VALIDATED_PIPELINE_SUBPATH,
+        "pipelinerun_prefix": PIPELINERUN_PREFIX,
+        "include_assess": True,
     },
     "VALIDATED": {
         "app": "javascript-validated",
         "component": "javascript-validated-build",
         "service_account": "build-pipeline-javascript-validated-build",
         "tl_npm_registry_url": TL_NPM_REGISTRY_URL_PROD,
+        "pipeline_subpath": VALIDATED_PIPELINE_SUBPATH,
+        "pipelinerun_prefix": PIPELINERUN_PREFIX,
+        "include_assess": True,
+    },
+    "REMEDIATED_STAGE": {
+        "app": "javascript-remediated-stage",
+        "component": "javascript-remediated-stage-build",
+        "service_account": "build-pipeline-javascript-remediated-stage-build",
+        # Thin remediations: no assess against a TL registry.
+        "pipeline_subpath": REMEDIATED_PIPELINE_SUBPATH,
+        "pipelinerun_prefix": REMEDIATED_PIPELINERUN_PREFIX,
+        "include_assess": False,
     },
 }
 # No SCRATCH target until a dedicated scratch Application/Component/
@@ -91,12 +114,13 @@ DEFAULT_TL_NPM_REGISTRY_URL = TL_NPM_REGISTRY_URL_PROD
 DEFAULT_PULP_READ_SECRET_NAME = "lightwell-pulp-read-secret"
 
 
-def pipeline_definition_path() -> Path:
-    """Return the path to the javascript-validated-build pipeline definition.
+def pipeline_definition_path(target: str | None = None) -> Path:
+    """Return the path to the pipeline YAML for ``target`` (default VALIDATED).
 
     Configurable via TEKTON_PIPELINE_DIR; otherwise falls back to the repo layout.
     """
-    pipeline_subpath = Path("pipelines") / "javascript-validated-build" / "javascript-validated-build.yaml"
+    cfg = TARGET_CONFIGS.get(target or DEFAULT_TARGET, TARGET_CONFIGS[DEFAULT_TARGET])
+    pipeline_subpath = cfg.get("pipeline_subpath", VALIDATED_PIPELINE_SUBPATH)
     if pipeline_dir := os.environ.get("TEKTON_PIPELINE_DIR"):
         return Path(pipeline_dir) / pipeline_subpath
     project_root = Path(__file__).resolve().parents[4]
