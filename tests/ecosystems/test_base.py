@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import argparse
+
 import pytest
 
-from import_orchestrator.ecosystems.base import Ecosystem, ai_attribution_params
+from import_orchestrator.ecosystems.base import Ecosystem, ai_attribution_params, resolve_pipelinerun_prefix
 
 
 class _Dummy:
@@ -45,6 +47,21 @@ class _Dummy:
 
 def test_dummy_satisfies_ecosystem_protocol():
     assert isinstance(_Dummy(), Ecosystem)
+
+
+def test_resolve_pipelinerun_prefix_defaults_to_class_attr():
+    """Ecosystems without pipelinerun_prefix_for use the class prefix."""
+    assert resolve_pipelinerun_prefix(_Dummy(), argparse.Namespace()) == "dummy-"
+
+
+def test_resolve_pipelinerun_prefix_uses_per_target_method():
+    """When pipelinerun_prefix_for exists, release/run use that prefix."""
+
+    class _PerTarget(_Dummy):
+        def pipelinerun_prefix_for(self, args):
+            return "remediated-"
+
+    assert resolve_pipelinerun_prefix(_PerTarget(), argparse.Namespace()) == "remediated-"
 
 
 class TestAiAttributionParams:

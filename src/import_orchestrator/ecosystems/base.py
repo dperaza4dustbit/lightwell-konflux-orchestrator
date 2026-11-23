@@ -116,3 +116,17 @@ class Ecosystem(Protocol):
     def register_cli(self, subparsers: argparse._SubParsersAction) -> None:
         """Register this ecosystem's subparser and its command tree."""
         ...
+
+
+def resolve_pipelinerun_prefix(ecosystem: Ecosystem, args: argparse.Namespace) -> str:
+    """Return the PipelineRun/Release ``generateName`` prefix for this invocation.
+
+    Ecosystems with per-target prefixes (javascript) may implement
+    ``pipelinerun_prefix_for(args)``; otherwise the class ``pipelinerun_prefix`` is used.
+    Lookup is on the concrete class so MagicMock test doubles keep using
+    ``pipelinerun_prefix``.
+    """
+    method = getattr(type(ecosystem), "pipelinerun_prefix_for", None)
+    if callable(method):
+        return method(ecosystem, args)
+    return ecosystem.pipelinerun_prefix

@@ -66,14 +66,15 @@ def build_pipelinerun_manifest(
     source_revision: str,
     builder_image: str,
     task_build_npm_package_bundle: str,
-    task_assess_npm_compliance_bundle: str,
+    task_assess_npm_compliance_bundle: str | None = None,
     tl_npm_registry_url: str = config.DEFAULT_TL_NPM_REGISTRY_URL,
     pulp_read_secret_name: str = config.DEFAULT_PULP_READ_SECRET_NAME,
     git_auth_secret: str = config.GIT_AUTH_SECRET,
     publish_version_suffix: str | None = None,
     service_account: str | None = None,
+    include_assess: bool = True,
 ) -> dict[str, Any]:
-    """Build a javascript-validated-build PipelineRun for one package/version.
+    """Build a javascript factory PipelineRun for one package/version.
 
     The recipe lives under ``packages/<name>/<version>/`` in the source monorepo
     (scoped names keep ``@scope/name`` in the path). Output OCI tag and the
@@ -84,6 +85,9 @@ def build_pipelinerun_manifest(
 
     ``publish_version_suffix`` makes the recipes publish ``<version>-<suffix>``
     instead of ``version``; when unset they publish ``version`` unchanged.
+
+    When ``include_assess`` is False (remediated thin builds), assess-related
+    params are omitted and the runtime label is ``build-npm``.
     """
     package_path = config.package_dir(package, version)
     package_slug = sanitize_package_for_resource(package)
@@ -96,11 +100,18 @@ def build_pipelinerun_manifest(
         {"name": "packages", "value": [package_path]},
         {"name": "builder-image", "value": builder_image},
         {"name": "task-build-npm-package-bundle", "value": task_build_npm_package_bundle},
-        {"name": "task-assess-npm-compliance-bundle", "value": task_assess_npm_compliance_bundle},
-        {"name": "tl-npm-registry-url", "value": tl_npm_registry_url},
-        {"name": "pulp-read-secret-name", "value": pulp_read_secret_name},
         {"name": "lightwell-publish-version-override", "value": publish_version_override},
     ]
+    if include_assess:
+        if not task_assess_npm_compliance_bundle:
+            raise TriggerError("task_assess_npm_compliance_bundle is required when include_assess is True")
+        params.extend(
+            [
+                {"name": "task-assess-npm-compliance-bundle", "value": task_assess_npm_compliance_bundle},
+                {"name": "tl-npm-registry-url", "value": tl_npm_registry_url},
+                {"name": "pulp-read-secret-name", "value": pulp_read_secret_name},
+            ]
+        )
 
     spec: dict[str, Any] = {
         "pipelineSpec": pipeline_spec,
@@ -112,6 +123,7 @@ def build_pipelinerun_manifest(
     if service_account:
         spec["taskRunTemplate"] = {"serviceAccountName": service_account}
 
+    runtime = "build-npm-compliance" if include_assess else "build-npm"
     return {
         "apiVersion": "tekton.dev/v1",
         "kind": "PipelineRun",
@@ -123,7 +135,7 @@ def build_pipelinerun_manifest(
                 "appstudio.openshift.io/application": application,
                 "appstudio.openshift.io/component": component,
                 "pipelines.appstudio.openshift.io/type": "build",
-                "pipelines.openshift.io/runtime": "build-npm-compliance",
+                "pipelines.openshift.io/runtime": runtime,
                 "lightwell.redhat.com/package": package_slug,
                 "lightwell.redhat.com/version": version,
             },

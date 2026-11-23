@@ -28,6 +28,7 @@ from import_orchestrator.constants import (
     KUBEARCHIVE_API,
 )
 from import_orchestrator.database import WorkflowDatabase, warn_if_legacy_database
+from import_orchestrator.ecosystems.base import resolve_pipelinerun_prefix
 from import_orchestrator.engine import (
     ImportOrchestrator,
     ImportTrigger,
@@ -137,7 +138,7 @@ def run_orchestrate(args: argparse.Namespace, empty_db_warning: str) -> int:
             view=view,
             kube=kube,
             max_parallel=args.max_parallel,
-            prefix=eco.pipelinerun_prefix,
+            prefix=resolve_pipelinerun_prefix(eco, args),
             release_plan=getattr(args, "release_plan", None),
         )
 
