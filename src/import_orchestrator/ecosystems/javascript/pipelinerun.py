@@ -83,8 +83,11 @@ def build_pipelinerun_manifest(
     ``git_auth_secret`` names the secret bound to the ``git-auth`` workspace,
     which the clone task uses to authenticate against the recipe monorepo.
 
-    ``publish_version_suffix`` makes the recipes publish ``<version>-<suffix>``
-    instead of ``version``; when unset they publish ``version`` unchanged.
+    ``publish_version_suffix`` sets ``lightwell-publish-version-override`` to
+    ``<version>-<suffix>`` so resolve-npm-source-artifact rewrites manifests
+    before build/assess. When unset the override is empty and that task
+    passthroughs the clone SOURCE_ARTIFACT. npm-builder is not passed the
+    override on Konflux.
 
     When ``include_assess`` is False (remediated thin builds), assess-related
     params are omitted and the runtime label is ``build-npm``.
