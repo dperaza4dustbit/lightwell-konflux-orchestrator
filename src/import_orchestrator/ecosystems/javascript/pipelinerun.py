@@ -73,6 +73,7 @@ def build_pipelinerun_manifest(
     publish_version_suffix: str | None = None,
     service_account: str | None = None,
     include_assess: bool = True,
+    build_intent: str = "release",
 ) -> dict[str, Any]:
     """Build a javascript factory PipelineRun for one package/version.
 
@@ -84,10 +85,12 @@ def build_pipelinerun_manifest(
     which the clone task uses to authenticate against the recipe monorepo.
 
     ``publish_version_suffix`` sets ``lightwell-publish-version-override`` to
-    ``<version>-<suffix>`` so resolve-npm-source-artifact rewrites manifests
-    before build/assess. When unset the override is empty and that task
-    passthroughs the clone SOURCE_ARTIFACT. npm-builder is not passed the
-    override on Konflux.
+    ``<version>-<suffix>``. The tasks receive that as
+    ``LIGHTWELL_SCRATCH_PUBLISH_VERSION`` and rewrite manifests when it is
+    non-empty. Recipe entrypoints do not read that name.
+    ``build_intent`` is ``scratch`` only for the SCRATCH target.
+    Any other intent is ``release``: the override step then fails, because a
+    release is admitted by a ReleasePlanAdmission.
 
     When ``include_assess`` is False (remediated thin builds), assess-related
     params are omitted and the runtime label is ``build-npm``.
@@ -104,6 +107,7 @@ def build_pipelinerun_manifest(
         {"name": "builder-image", "value": builder_image},
         {"name": "task-build-npm-package-bundle", "value": task_build_npm_package_bundle},
         {"name": "lightwell-publish-version-override", "value": publish_version_override},
+        {"name": "lightwell-build-intent", "value": build_intent},
     ]
     if include_assess:
         if not task_assess_npm_compliance_bundle:

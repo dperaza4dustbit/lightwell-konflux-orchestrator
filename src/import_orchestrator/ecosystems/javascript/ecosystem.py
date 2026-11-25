@@ -20,7 +20,6 @@ import argparse
 
 from import_orchestrator.ecosystems.base import build_request_identity
 from import_orchestrator.ecosystems.javascript import config
-from import_orchestrator.ecosystems.javascript.pipeline_embed import embed_manifest_publish_version_script
 from import_orchestrator.ecosystems.javascript.pipelinerun import build_pipelinerun_manifest, parse_ref
 from import_orchestrator.engine.pipeline_loader import load_pipeline
 
@@ -44,7 +43,7 @@ class JavaScriptEcosystem:
         target = getattr(args, "target", config.DEFAULT_TARGET)
         cfg = config.TARGET_CONFIGS[target]
         include_assess = cfg.get("include_assess", True)
-        pipeline_spec = embed_manifest_publish_version_script(load_pipeline(config.pipeline_definition_path(target)))
+        pipeline_spec = load_pipeline(config.pipeline_definition_path(target))
         assess_bundle = getattr(args, "task_assess_npm_compliance_bundle", None)
         pulp_secret = getattr(args, "pulp_read_secret_name", None)
         return build_pipelinerun_manifest(
@@ -75,6 +74,9 @@ class JavaScriptEcosystem:
             git_auth_secret=getattr(args, "git_auth_secret", config.GIT_AUTH_SECRET),
             publish_version_suffix=getattr(args, "publish_version_suffix", None),
             include_assess=include_assess,
+            build_intent=(
+                "scratch" if cfg.get("skip_release") and cfg.get("allow_publish_version_suffix") else "release"
+            ),
         )
 
     def request_identity(self, ref: str, args: argparse.Namespace) -> dict[str, str]:

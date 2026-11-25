@@ -9,11 +9,14 @@ metadata:
 spec:
   description: |
     Lightwell JavaScript validated npm factory build (orchestrator-driven).
-    Clones the recipe monorepo, optionally rewrites manifests for SCRATCH
-    publish-version overrides, builds one package directory
+    Clones the recipe monorepo, builds one package directory
     (packages/<name>/<version>), runs assess-npm-compliance, and pushes a
     durable :<tag>.npm snapshot OCI. Unlike the PAC PoC pipelines, package
-    selection is an explicit param (no git-diff identify step).
+    selection is an explicit param (no git-diff identify step). When
+    lightwell-publish-version-override is set, build and assess each rewrite
+    recipe manifests via calunga-javascript hack/manifest_publish_version.py
+    before they run. The override is refused unless the manifest stream is
+    validated and lightwell-build-intent is scratch.
   params:
     - name: git-url
       type: string
@@ -73,12 +76,18 @@ spec:
       default: lightwell-pulp-read-secret
     - name: lightwell-publish-version-override
       description: >-
-        When non-empty (SCRATCH), resolve-npm-source-artifact rewrites recipe
-        manifests to this version before build/assess. When empty, that task
-        passthroughs the clone SOURCE_ARTIFACT. npm-builder is unaware of the
-        override on the Konflux path.
+        When non-empty, build and assess rewrite recipe manifests to this
+        version. Passed to those tasks as LIGHTWELL_SCRATCH_PUBLISH_VERSION,
+        which entrypoints do not read. Refused unless lightwell-build-intent
+        is scratch and every manifest stream is validated. Empty skips the rewrite.
       type: string
       default: ""
+    - name: lightwell-build-intent
+      description: >-
+        scratch or release. scratch is the only intent that may set
+        lightwell-publish-version-override. release fails that step.
+      type: string
+      default: "release"
     - name: npm-publish-secret-name
       type: string
       default: rhtl-pulp-npm-stage-credentials
@@ -141,7 +150,7 @@ spec:
       workspaces:
         - name: basic-auth
           workspace: git-auth
-    - name: resolve-npm-source-artifact
+    - name: build-npm-package
       runAfter:
         - clone-repository
       params:
@@ -149,140 +158,6 @@ spec:
           value: $(params.packages[*])
         - name: SOURCE_ARTIFACT
           value: $(tasks.clone-repository.results.SOURCE_ARTIFACT)
-        - name: LIGHTWELL_PUBLISH_VERSION_OVERRIDE
-          value: $(params.lightwell-publish-version-override)
-        - name: BUILDER_IMAGE
-          value: $(params.builder-image)
-        - name: ociStorage
-          value: $(params.output-image).publish-version
-      taskSpec:
-        description: >-
-          Always runs. When LIGHTWELL_PUBLISH_VERSION_OVERRIDE is empty,
-          passthrough the clone SOURCE_ARTIFACT. When set (SCRATCH), unpack,
-          rewrite recipe manifests (embedded manifest_publish_version.py), and
-          publish a new Trusted Artifact for build/assess.
-        params:
-          - name: PACKAGES
-            type: array
-          - name: SOURCE_ARTIFACT
-            type: string
-          - name: LIGHTWELL_PUBLISH_VERSION_OVERRIDE
-            type: string
-          - name: BUILDER_IMAGE
-            type: string
-          - name: ociStorage
-            type: string
-          - name: WORKDIR_ROOT
-            type: string
-            default: /var/workdir
-          - name: caTrustConfigMapKey
-            type: string
-            default: ca-bundle.crt
-          - name: caTrustConfigMapName
-            type: string
-            default: trusted-ca
-        results:
-          - name: SOURCE_ARTIFACT
-            description: Trusted Artifact URI for build and assess
-        volumes:
-          - name: trusted-ca
-            configMap:
-              items:
-                - key: $(params.caTrustConfigMapKey)
-                  path: ca-bundle.crt
-              name: $(params.caTrustConfigMapName)
-              optional: true
-          - name: workdir
-            emptyDir: {}
-        stepTemplate:
-          env:
-            - name: WORKDIR_ROOT
-              value: $(params.WORKDIR_ROOT)
-            - name: SOURCE_ROOT
-              value: $(params.WORKDIR_ROOT)/source
-            - name: LIGHTWELL_PUBLISH_VERSION_OVERRIDE
-              value: $(params.LIGHTWELL_PUBLISH_VERSION_OVERRIDE)
-          volumeMounts:
-            - mountPath: $(params.WORKDIR_ROOT)
-              name: workdir
-        steps:
-          - name: use-or-passthrough
-            image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:2712c8a6453fc9db5fc4c2d9d952554a4eea46d2fdba47a272b79fa07f8c8c40
-            volumeMounts:
-              - mountPath: /etc/pki/tls/certs/ca-custom-bundle.crt
-                name: trusted-ca
-                readOnly: true
-                subPath: ca-bundle.crt
-            script: |
-              #!/bin/sh
-              set -eu
-              if [ -z "${LIGHTWELL_PUBLISH_VERSION_OVERRIDE}" ]; then
-                printf '%s' "$(params.SOURCE_ARTIFACT)" > "$(results.SOURCE_ARTIFACT.path)"
-                echo "[resolve-npm-source-artifact] passthrough clone SOURCE_ARTIFACT"
-                exit 0
-              fi
-              /usr/local/bin/entrypoint use \
-                "$(params.SOURCE_ARTIFACT)=$(params.WORKDIR_ROOT)/source"
-            computeResources:
-              limits:
-                memory: 1Gi
-              requests:
-                cpu: 200m
-                memory: 256Mi
-          - name: rewrite-manifests
-            image: $(params.BUILDER_IMAGE)
-            script: |
-              #!/usr/bin/python3.9
-              # LKO_MANIFEST_PUBLISH_VERSION_SCRIPT
-              raise SystemExit(
-                  "manifest_publish_version.py was not embedded; "
-                  "load the pipeline via JavaScriptEcosystem.build_pipelinerun"
-              )
-            args:
-              - $(params.LIGHTWELL_PUBLISH_VERSION_OVERRIDE)
-              - $(params.PACKAGES[*])
-            computeResources:
-              limits:
-                memory: 512Mi
-              requests:
-                cpu: 100m
-                memory: 128Mi
-          - name: create-trusted-artifact
-            image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:2712c8a6453fc9db5fc4c2d9d952554a4eea46d2fdba47a272b79fa07f8c8c40
-            env:
-              - name: HOME
-                value: /tekton/home
-            volumeMounts:
-              - mountPath: /etc/pki/tls/certs/ca-custom-bundle.crt
-                name: trusted-ca
-                readOnly: true
-                subPath: ca-bundle.crt
-            script: |
-              #!/bin/sh
-              set -eu
-              if [ -z "${LIGHTWELL_PUBLISH_VERSION_OVERRIDE}" ]; then
-                # Result already written by use-or-passthrough.
-                exit 0
-              fi
-              /usr/local/bin/entrypoint create \
-                --store "$(params.ociStorage)" \
-                "$(results.SOURCE_ARTIFACT.path)=$(params.WORKDIR_ROOT)/source"
-              URI="$(cat "$(results.SOURCE_ARTIFACT.path)")"
-              echo "[resolve-npm-source-artifact] SOURCE_ARTIFACT=${URI}"
-            computeResources:
-              limits:
-                memory: 1Gi
-              requests:
-                cpu: 200m
-                memory: 256Mi
-    - name: build-npm-package
-      runAfter:
-        - resolve-npm-source-artifact
-      params:
-        - name: PACKAGES
-          value: $(params.packages[*])
-        - name: SOURCE_ARTIFACT
-          value: $(tasks.resolve-npm-source-artifact.results.SOURCE_ARTIFACT)
         - name: BUILDER_IMAGE
           value: $(params.builder-image)
         - name: IMAGE
@@ -295,6 +170,10 @@ spec:
           value: $(params.npm-publish-secret-name)
         - name: PUBLISH_TO_PULP
           value: $(params.publish-to-pulp)
+        - name: LIGHTWELL_SCRATCH_PUBLISH_VERSION
+          value: $(params.lightwell-publish-version-override)
+        - name: LIGHTWELL_BUILD_INTENT
+          value: $(params.lightwell-build-intent)
       taskRef:
         resolver: bundles
         params:
@@ -318,7 +197,11 @@ spec:
         - name: BUILDER_IMAGE
           value: $(params.builder-image)
         - name: SOURCE_ARTIFACT
-          value: $(tasks.resolve-npm-source-artifact.results.SOURCE_ARTIFACT)
+          value: $(tasks.clone-repository.results.SOURCE_ARTIFACT)
+        - name: LIGHTWELL_SCRATCH_PUBLISH_VERSION
+          value: $(params.lightwell-publish-version-override)
+        - name: LIGHTWELL_BUILD_INTENT
+          value: $(params.lightwell-build-intent)
         - name: PACKAGES
           value: $(params.packages[*])
         - name: PACKAGES_STATUS
